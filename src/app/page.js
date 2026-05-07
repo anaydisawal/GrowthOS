@@ -12,18 +12,26 @@ export default function Home() {
 
   // Load Saved Data
   useEffect(() => {
-    const savedMaths = localStorage.getItem("maths");
-    const savedCoding = localStorage.getItem("coding");
-    const savedExercise = localStorage.getItem("exercise");
-    const savedAudiobook = localStorage.getItem("audiobook");
-    const savedChanting = localStorage.getItem("chanting");
+  const fetchData = async () => {
+    const { data, error } = await supabase
+      .from("daily_logs")
+      .select("*")
+      .order("id", { ascending: false })
+      .limit(1);
 
-    if (savedMaths) setMaths(savedMaths);
-    if (savedCoding) setCoding(savedCoding);
-    if (savedExercise) setExercise(savedExercise);
-    if (savedAudiobook) setAudiobook(savedAudiobook);
-    if (savedChanting) setChanting(savedChanting);
-  }, []);
+    if (data && data.length > 0) {
+      const latest = data[0];
+
+      setMaths(latest.maths || "0");
+      setCoding(latest.coding || "0");
+      setExercise(latest.exercise || "0");
+      setAudiobook(latest.audiobook || "0");
+      setChanting(latest.chanting || "0");
+    }
+  };
+
+  fetchData();
+}, []);
 
   // Save Data Automatically
   useEffect(() => {
