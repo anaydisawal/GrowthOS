@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 
 export default function Home() {
   const [maths, setMaths] = useState("2");
@@ -49,6 +50,19 @@ export default function Home() {
     (chantingDone ? 20 : 0);
 
   // Goals Completed
+  const saveToCloud = async () => {
+  await supabase.from("daily_logs").insert([
+    {
+      maths,
+      coding,
+      exercise,
+      audiobook,
+      chanting,
+    },
+  ]);
+
+  alert("Saved to cloud successfully 🚀");
+};
   const completedGoals = [
     mathsDone,
     codingDone,
@@ -334,7 +348,10 @@ export default function Home() {
             className="w-full h-40 bg-[#121B2B] rounded-2xl p-4 border border-white/10 outline-none resize-none"
           ></textarea>
 
-          <button className="mt-5 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl transition">
+          <button
+  onClick={saveToCloud}
+  className="mt-5 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl transition"
+>
             Save Entry
           </button>
         </section>
