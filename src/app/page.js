@@ -4,43 +4,38 @@ import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 
 export default function Home() {
-  const [maths, setMaths] = useState("2");
-  const [coding, setCoding] = useState("1");
-  const [exercise, setExercise] = useState("45");
-  const [audiobook, setAudiobook] = useState("30");
-  const [chanting, setChanting] = useState("2");
+  const today = new Date().toLocaleDateString();
 
-  // Load Saved Data
+  const [maths, setMaths] = useState("0");
+  const [coding, setCoding] = useState("0");
+  const [exercise, setExercise] = useState("0");
+  const [audiobook, setAudiobook] = useState("0");
+  const [chanting, setChanting] = useState("0");
+  const [reflection, setReflection] = useState("");
+
+  // Load today's data
   useEffect(() => {
-  const fetchData = async () => {
-    const { data, error } = await supabase
-      .from("daily_logs")
-      .select("*")
-      .order("id", { ascending: false })
-      .limit(1);
+    const fetchTodayData = async () => {
+      const { data, error } = await supabase
+        .from("daily_logs")
+        .select("*")
+        .eq("date", today)
+        .limit(1);
 
-    if (data && data.length > 0) {
-      const latest = data[0];
+      if (data && data.length > 0) {
+        const entry = data[0];
 
-      setMaths(latest.maths || "0");
-      setCoding(latest.coding || "0");
-      setExercise(latest.exercise || "0");
-      setAudiobook(latest.audiobook || "0");
-      setChanting(latest.chanting || "0");
-    }
-  };
+        setMaths(entry.maths || "0");
+        setCoding(entry.coding || "0");
+        setExercise(entry.exercise || "0");
+        setAudiobook(entry.audiobook || "0");
+        setChanting(entry.chanting || "0");
+        setReflection(entry.reflection || "");
+      }
+    };
 
-  fetchData();
-}, []);
-
-  // Save Data Automatically
-  useEffect(() => {
-    localStorage.setItem("maths", maths);
-    localStorage.setItem("coding", coding);
-    localStorage.setItem("exercise", exercise);
-    localStorage.setItem("audiobook", audiobook);
-    localStorage.setItem("chanting", chanting);
-  }, [maths, coding, exercise, audiobook, chanting]);
+    fetchTodayData();
+  }, [today]);
 
   // Goal Logic
   const mathsDone = Number(maths) >= 2;
@@ -49,7 +44,7 @@ export default function Home() {
   const audiobookDone = Number(audiobook) >= 30;
   const chantingDone = Number(chanting) >= 2;
 
-  // Productivity Score
+  // Productivity
   const productivity =
     (mathsDone ? 20 : 0) +
     (codingDone ? 20 : 0) +
@@ -57,20 +52,6 @@ export default function Home() {
     (audiobookDone ? 20 : 0) +
     (chantingDone ? 20 : 0);
 
-  // Goals Completed
-  const saveToCloud = async () => {
-  await supabase.from("daily_logs").insert([
-    {
-      maths,
-      coding,
-      exercise,
-      audiobook,
-      chanting,
-    },
-  ]);
-
-  alert("Saved to cloud successfully 🚀");
-};
   const completedGoals = [
     mathsDone,
     codingDone,
@@ -78,6 +59,43 @@ export default function Home() {
     audiobookDone,
     chantingDone,
   ].filter(Boolean).length;
+
+  // Save Today's Entry
+  const saveToCloud = async () => {
+    const { data: existing } = await supabase
+      .from("daily_logs")
+      .select("*")
+      .eq("date", today)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      await supabase
+        .from("daily_logs")
+        .update({
+          maths,
+          coding,
+          exercise,
+          audiobook,
+          chanting,
+          reflection,
+        })
+        .eq("date", today);
+    } else {
+      await supabase.from("daily_logs").insert([
+        {
+          date: today,
+          maths,
+          coding,
+          exercise,
+          audiobook,
+          chanting,
+          reflection,
+        },
+      ]);
+    }
+
+    alert("Saved Successfully 🚀");
+  };
 
   const goalCards = [
     {
@@ -145,16 +163,19 @@ export default function Home() {
             </h1>
 
             <p className="text-gray-400 mt-1">
-              Become 1% better every day.
+              {today}
             </p>
           </div>
 
-          <button className="bg-white/10 border border-white/10 px-5 py-3 rounded-2xl hover:bg-white/20 transition">
-            Share Dashboard
+          <button
+            onClick={saveToCloud}
+            className="bg-white/10 border border-white/10 px-5 py-3 rounded-2xl hover:bg-white/20 transition"
+          >
+            Save Day
           </button>
         </div>
 
-        {/* Top Stats */}
+        {/* Stats */}
         <section className="grid md:grid-cols-3 gap-6 mb-8">
           <div className="bg-[#0B1220] rounded-3xl p-6 border border-white/10">
             <h2 className="text-gray-400 mb-3">
@@ -197,17 +218,9 @@ export default function Home() {
 
         {/* Progress Cards */}
         <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10 mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold">
-                Today's Progress
-              </h2>
-
-              <p className="text-gray-400">
-                {completedGoals} / 5 goals completed
-              </p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold mb-6">
+            Today's Progress
+          </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {goalCards.map((card) => (
@@ -284,67 +297,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Audiobook */}
-        <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10 mb-8">
-          <h2 className="text-2xl font-bold mb-6">
-            Currently Listening
-          </h2>
-
-          <div className="flex gap-5 items-center">
-            <div className="w-24 h-32 rounded-2xl bg-gray-700 flex items-center justify-center text-center text-sm p-2">
-              Psychology of Money
-            </div>
-
-            <div>
-              <h3 className="text-2xl font-semibold">
-                The Psychology of Money
-              </h3>
-
-              <p className="text-gray-400 mb-4">
-                Morgan Housel
-              </p>
-
-              <div className="w-64 bg-gray-700 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-blue-500 h-full"
-                  style={{
-                    width: `${Math.min(
-                      Number(audiobook) * 2,
-                      100
-                    )}%`,
-                  }}
-                ></div>
-              </div>
-
-              <p className="text-sm text-gray-400 mt-2">
-                Listening Today: {audiobook} mins
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Heatmap */}
-        <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10 mb-8">
-          <h2 className="text-2xl font-bold mb-5">
-            Activity Heatmap
-          </h2>
-
-          <div className="grid grid-cols-10 gap-2">
-            {Array.from({ length: 70 }).map((_, i) => (
-              <div
-                key={i}
-                className={`aspect-square rounded-md ${
-                  i % 5 === 0
-                    ? "bg-green-300"
-                    : i % 3 === 0
-                    ? "bg-green-500/70"
-                    : "bg-green-900/40"
-                }`}
-              ></div>
-            ))}
-          </div>
-        </section>
-
         {/* Reflection */}
         <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10">
           <h2 className="text-2xl font-bold mb-5">
@@ -352,14 +304,16 @@ export default function Home() {
           </h2>
 
           <textarea
+            value={reflection}
+            onChange={(e) => setReflection(e.target.value)}
             placeholder="How was your day? What did you learn?"
             className="w-full h-40 bg-[#121B2B] rounded-2xl p-4 border border-white/10 outline-none resize-none"
           ></textarea>
 
           <button
-  onClick={saveToCloud}
-  className="mt-5 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl transition"
->
+            onClick={saveToCloud}
+            className="mt-5 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-2xl transition"
+          >
             Save Entry
           </button>
         </section>
