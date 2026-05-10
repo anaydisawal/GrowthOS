@@ -12,11 +12,13 @@ export default function Home() {
   const [audiobook, setAudiobook] = useState("0");
   const [chanting, setChanting] = useState("0");
   const [reflection, setReflection] = useState("");
+  const [history, setHistory] = useState([]);
 
-  // Load today's data
+  // Load Data
   useEffect(() => {
-    const fetchTodayData = async () => {
-      const { data, error } = await supabase
+    const loadData = async () => {
+      // Today's Entry
+      const { data } = await supabase
         .from("daily_logs")
         .select("*")
         .eq("date", today)
@@ -32,9 +34,20 @@ export default function Home() {
         setChanting(entry.chanting || "0");
         setReflection(entry.reflection || "");
       }
+
+      // History
+      const { data: historyData } = await supabase
+        .from("daily_logs")
+        .select("*")
+        .order("id", { ascending: false })
+        .limit(7);
+
+      if (historyData) {
+        setHistory(historyData);
+      }
     };
 
-    fetchTodayData();
+    loadData();
   }, [today]);
 
   // Goal Logic
@@ -60,7 +73,7 @@ export default function Home() {
     chantingDone,
   ].filter(Boolean).length;
 
-  // Save Today's Entry
+  // Save Entry
   const saveToCloud = async () => {
     const { data: existing } = await supabase
       .from("daily_logs")
@@ -95,6 +108,8 @@ export default function Home() {
     }
 
     alert("Saved Successfully 🚀");
+
+    window.location.reload();
   };
 
   const goalCards = [
@@ -216,7 +231,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Progress Cards */}
+        {/* Progress */}
         <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10 mb-8">
           <h2 className="text-2xl font-bold mb-6">
             Today's Progress
@@ -298,7 +313,7 @@ export default function Home() {
         </section>
 
         {/* Reflection */}
-        <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10">
+        <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10 mb-8">
           <h2 className="text-2xl font-bold mb-5">
             Daily Reflection
           </h2>
@@ -316,6 +331,36 @@ export default function Home() {
           >
             Save Entry
           </button>
+        </section>
+
+        {/* History */}
+        <section className="bg-[#0B1220] rounded-3xl p-6 border border-white/10">
+          <h2 className="text-2xl font-bold mb-5">
+            Last 7 Days
+          </h2>
+
+          <div className="space-y-4">
+            {history.map((day, index) => (
+              <div
+                key={index}
+                className="bg-[#121B2B] rounded-2xl p-4"
+              >
+                <div className="flex justify-between mb-2">
+                  <h3 className="font-semibold">
+                    {day.date}
+                  </h3>
+
+                  <span className="text-green-400">
+                    Maths: {day.maths}h
+                  </span>
+                </div>
+
+                <p className="text-gray-400 text-sm">
+                  {day.reflection}
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
       </main>
     </div>
